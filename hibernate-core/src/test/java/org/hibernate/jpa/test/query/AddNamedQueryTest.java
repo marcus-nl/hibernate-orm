@@ -10,6 +10,9 @@ import javax.persistence.EntityManager;
 import javax.persistence.FlushModeType;
 import javax.persistence.LockModeType;
 import javax.persistence.Query;
+import javax.persistence.Tuple;
+import javax.persistence.TypedQuery;
+import javax.persistence.criteria.*;
 
 import org.hibernate.CacheMode;
 import org.hibernate.FlushMode;
@@ -26,6 +29,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@link javax.persistence.EntityManagerFactory#addNamedQuery} handling.
@@ -51,6 +55,65 @@ public class AddNamedQueryTest extends BaseEntityManagerFunctionalTestCase {
 		em.getEntityManagerFactory().addNamedQuery( name, query );
 		Query query2 = em.createNamedQuery( name );
 		query2.getResultList();
+		em.close();
+	}
+
+	@Test
+	public void criteriaQueryTest() {
+		EntityManager em = getOrCreateEntityManager();
+		
+		em.getTransaction().begin();
+		Item item = new Item( "Mouse", "Micro$oft mouse" );
+		em.persist( item );
+		assertTrue( em.contains( item ) );
+		em.getTransaction().commit();
+
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Item> query = cb.createQuery( Item.class );
+		Root<Item> root = query.from( Item.class );
+		final String name = "myCriteriaItemQuery";
+		em.getEntityManagerFactory().addNamedQuery( name, em.createQuery(query) );
+
+		em.getTransaction().begin();
+		TypedQuery<Item> query2 = em.createNamedQuery( name, Item.class );
+		item = query2.getSingleResult();
+		assertEquals( "Mouse", item.getName() );
+		assertEquals( "Micro$oft mouse", item.getDescr() );
+		em.getTransaction().commit();
+
+		em.close();
+	}
+
+	@Test
+	public void tupleCriteriaQueryTest() {
+		EntityManager em = getOrCreateEntityManager();
+		
+		em.getTransaction().begin();
+		Item item = new Item( "Mouse", "Micro$oft mouse" );
+		em.persist( item );
+		assertTrue( em.contains( item ) );
+		em.getTransaction().commit();
+
+		em.getTransaction().begin();
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Tuple> query = cb.createQuery( Tuple.class );
+		Root<Item> root = query.from( Item.class );
+		query.multiselect(root.get("name").alias("n"), root.get("descr").alias("d"));
+		final String name = "myCriteriaItemQuery";
+		TypedQuery<Tuple> query2 = em.createQuery(query);
+		Tuple tuple = query2.getSingleResult();
+		assertEquals( "Mouse", tuple.get( "n" ) );
+		assertEquals( "Micro$oft mouse", tuple.get( "d" ) );
+		em.getEntityManagerFactory().addNamedQuery( name, query2 );
+		em.getTransaction().commit();
+
+		em.getTransaction().begin();
+		query2 = em.createNamedQuery( name, Tuple.class );
+		tuple = query2.getSingleResult();
+		assertEquals( "Mouse", tuple.get( "n" ) );
+		assertEquals( "Micro$oft mouse", tuple.get( "d" ) );
+		em.getTransaction().commit();
+
 		em.close();
 	}
 

@@ -21,6 +21,8 @@ import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.persistence.TemporalType;
 import javax.persistence.Tuple;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
 
 import org.hibernate.Hibernate;
 import org.hibernate.QueryException;
@@ -1461,23 +1463,36 @@ public class QueryTest extends BaseEntityManagerFunctionalTestCase {
 			em.persist( item );
 			assertTrue( em.contains( item ) );
 			em.getTransaction().commit();
-
 			em.getTransaction().begin();
+
 			Object[] itemData = em.createQuery( "select i.name,i.descr from Item i", Object[].class ).getSingleResult();
 			assertEquals( 2, itemData.length );
 			assertEquals( String.class, itemData[0].getClass() );
 			assertEquals( String.class, itemData[1].getClass() );
-			Tuple itemTuple = em.createQuery( "select i.name,i.descr from Item i", Tuple.class ).getSingleResult();
+			
+			Tuple itemTuple = em.createQuery( "select i.name as n, i.descr as d from Item i", Tuple.class ).getSingleResult();
 			assertEquals( 2, itemTuple.getElements().size() );
 			assertEquals( String.class, itemTuple.get( 0 ).getClass() );
 			assertEquals( String.class, itemTuple.get( 1 ).getClass() );
+			assertEquals( "Mouse", itemTuple.get("n"));
+			assertEquals( "Micro$oft mouse", itemTuple.get("d"));
+			
+			itemTuple = em.createNamedQuery( "query-tuple", Tuple.class ).getSingleResult();
+			assertEquals( 2, itemTuple.getElements().size() );
+			assertEquals( String.class, itemTuple.get( 0 ).getClass() );
+			assertEquals( String.class, itemTuple.get( 1 ).getClass() );
+			assertEquals( "Mouse", itemTuple.get( "n" ));
+			assertEquals( "Micro$oft mouse", itemTuple.get( "d" ));
+
 			Item itemView = em.createQuery( "select new Item(i.name,i.descr) from Item i", Item.class )
 					.getSingleResult();
 			assertNotNull( itemView );
 			assertEquals( "Micro$oft mouse", itemView.getDescr() );
+			
 			itemView = em.createNamedQuery( "query-construct", Item.class ).getSingleResult();
 			assertNotNull( itemView );
 			assertEquals( "Micro$oft mouse", itemView.getDescr() );
+			
 			em.remove( item );
 			em.getTransaction().commit();
 		}

@@ -63,7 +63,8 @@ import org.hibernate.annotations.QueryHints;
 						@QueryHint( name = QueryHints.FLUSH_MODE, value = "manual" )
 				}
 		),
-		@NamedQuery(name = "query-construct", query = "select new Item(i.name,i.descr) from Item i")
+		@NamedQuery(name = "query-tuple", query = "select i.name as n,i.descr as d from Item i"),
+		@NamedQuery(name = "query-construct", query = "select new Item(i.name,i.descr) from Item i"),
 })
 public class Item implements Serializable {
 
